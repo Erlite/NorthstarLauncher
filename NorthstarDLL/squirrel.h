@@ -111,6 +111,7 @@ typedef void (*sq_pushfloatType)(HSquirrelVM* sqvm, SQFloat f);
 typedef void (*sq_pushboolType)(HSquirrelVM* sqvm, SQBool b);
 typedef void (*sq_pushassetType)(HSquirrelVM* sqvm, const SQChar* str, SQInteger iLength);
 typedef void (*sq_pushvectorType)(HSquirrelVM* sqvm, const SQFloat* pVec);
+typedef void (*sq_pushSQObjectType)(HSquirrelVM* sqvm, SQObject* pVec);
 
 // sq stack get funcs
 typedef const SQChar* (*sq_getstringType)(HSquirrelVM* sqvm, SQInteger iStackpos);
@@ -125,6 +126,44 @@ typedef SQFloat* (*sq_getvectorType)(HSquirrelVM* sqvm, SQInteger iStackpos);
 // sq stack userpointer funcs
 typedef void* (*sq_createuserdataType)(HSquirrelVM* sqvm, SQInteger iSize);
 typedef SQRESULT (*sq_setuserdatatypeidType)(HSquirrelVM* sqvm, SQInteger iStackpos, uint64_t iTypeId);
+
+typedef int (*sq_getSquirrelFunctionType)(HSquirrelVM* sqvm, const char* name, SQObject* returnObj, const char* signature);
+
+class SquirrelMessage
+{
+  public:
+	ScriptContext context;
+	const char* function_name;
+	std::vector<std::function<void()>> args;
+};
+
+class SquirrelMessageBuffer
+{
+
+  private:
+	std::vector<SquirrelMessage> messages = {};
+
+  public:
+	std::mutex mutex;
+	std::optional<SquirrelMessage> pop() {
+		std::lock_guard<std::mutex> guard(mutex);
+		if (!messages.empty())
+		{
+			auto message = messages.back();
+			messages.pop_back();
+			return message;
+		}
+		else
+		{
+			return std::nullopt;
+		}
+	}
+
+	void push(SquirrelMessage message) {
+		std::lock_guard<std::mutex> guard(mutex);
+		messages.push_back(message);
+	}
+};
 
 template <ScriptContext context> class SquirrelManager
 {
@@ -159,6 +198,7 @@ template <ScriptContext context> class SquirrelManager
 	sq_pushboolType __sq_pushbool;
 	sq_pushassetType __sq_pushasset;
 	sq_pushvectorType __sq_pushvector;
+	sq_pushSQObjectType __sq_pushSQObject;
 
 	sq_getstringType __sq_getstring;
 	sq_getintegerType __sq_getinteger;
@@ -171,6 +211,69 @@ template <ScriptContext context> class SquirrelManager
 
 	sq_createuserdataType __sq_createuserdata;
 	sq_setuserdatatypeidType __sq_setuserdatatypeid;
+
+#pragma endregion
+
+#pragma region MessageBuffer
+	SquirrelMessageBuffer* messageBuffer;
+	sq_getSquirrelFunctionType __sq_getSquirrelFunction;
+
+
+	// Base case for recursion
+	bool SqPushArgs(std::vector<std::function<void()>>& v)
+	{
+		return true;
+	}
+
+	template <typename T, typename... Args>
+	bool SqPushArgs(std::vector<std::function<void()>>& v, T& arg, Args... args)
+	{
+		std::cout << "type " << typeid(arg).name() << std::endl;
+		if constexpr (std::is_same_v<T, bool>)
+			v.push_back([arg]() { g_pSquirrel<context>->pushbool(g_pSquirrel<context>->m_pSQVM->sqvm, arg); });
+		else if constexpr (std::is_same_v<T, int>)
+			v.push_back([arg]() { g_pSquirrel<context>->pushinteger(g_pSquirrel<context>->m_pSQVM->sqvm, arg); });
+		else if constexpr (std::is_same_v<T, double>)
+			v.push_back([arg]() { g_pSquirrel<context>->pushfloat(g_pSquirrel<context>->m_pSQVM->sqvm, (float)arg); });
+		else if constexpr (std::is_same_v<T, float>)
+			v.push_back([arg]() { g_pSquirrel<context>->pushfloat(g_pSquirrel<context>->m_pSQVM->sqvm, arg); });
+		else
+		{
+			constexpr bool test = std::is_constructible<std::string, T>::value;
+			if constexpr (test)
+			{
+				auto converted = std::string(arg);
+				std::cout << "converted " << typeid(arg).name() << std::endl;
+				v.push_back(
+					[converted]()
+					{ g_pSquirrel<context>->pushstring(g_pSquirrel<context>->m_pSQVM->sqvm, converted.c_str(), converted.length()); });
+			}
+			else
+			{
+				int error;
+				std::cout << "Failed to convert arg of type " << typeid(arg).name() << std::endl;
+				return false;
+			}
+		}
+		// Recurse
+		return SqPushArgs(v, args...);
+	}
+
+	template <typename... Args> std::optional<SquirrelMessage> createMessage(const char* funcname, Args... args)
+	{
+		int args_processed = 0;
+		std::vector<std::function<void()>> function_vector;
+		bool success = SqPushArgs(function_vector, args...);
+		if (!success)
+		{
+			std::cout << "Failed to convert";
+			return std::nullopt;
+		}
+		SquirrelMessage message = {context, funcname, function_vector};
+		messageBuffer->push(message);
+		return message;
+	}
+
 #pragma endregion
 
   public:
@@ -260,6 +363,11 @@ template <ScriptContext context> class SquirrelManager
 		__sq_pushvector(sqvm, *(float**)&pVal);
 	}
 
+	inline void pushSQObject(HSquirrelVM* sqvm, SQObject* obj)
+	{
+		__sq_pushSQObject(sqvm, obj);
+	}
+
 	inline const SQChar* getstring(HSquirrelVM* sqvm, const SQInteger stackpos)
 	{
 		return __sq_getstring(sqvm, stackpos);
@@ -290,6 +398,11 @@ template <ScriptContext context> class SquirrelManager
 		float* pRet = __sq_getvector(sqvm, stackpos);
 		return *(Vector3*)&pRet;
 	}
+
+	inline int sq_getSquirrelFunction(HSquirrelVM* sqvm, const char* name, SQObject* returnObj, const char* signature) {
+		return __sq_getSquirrelFunction(sqvm, name, returnObj, signature);
+	}
+
 
 	inline SQRESULT getasset(HSquirrelVM* sqvm, const SQInteger stackpos, const char** result)
 	{
