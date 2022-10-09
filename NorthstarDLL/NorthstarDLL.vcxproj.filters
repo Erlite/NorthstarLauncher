@@ -157,6 +157,12 @@
     <Filter Include="Source Files\Scripted">
       <UniqueIdentifier>{7263403a-7550-4aa2-a724-f622ab200eed}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\Http">
+      <UniqueIdentifier>{4903bac5-6d6b-4dbc-a844-b98c37784f64}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Http">
+      <UniqueIdentifier>{f9b31002-455a-4d6a-8ad8-ca5469bc7979}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h">
@@ -1497,6 +1503,9 @@
     <ClInclude Include="squirrelclasstypes.h">
       <Filter>Header Files\Squirrel</Filter>
     </ClInclude>
+    <ClInclude Include="httprequesthandler.h">
+      <Filter>Header Files\Http</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
@@ -1702,6 +1711,9 @@
     </ClCompile>
     <ClCompile Include="scriptdatatables.cpp">
       <Filter>Source Files\Scripted</Filter>
+    </ClCompile>
+    <ClCompile Include="httprequesthandler.cpp">
+      <Filter>Source Files\Http</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
