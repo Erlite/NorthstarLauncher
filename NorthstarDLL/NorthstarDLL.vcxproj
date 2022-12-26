@@ -120,6 +120,7 @@
     <ClInclude Include="..\include\libcurl\include\curl\curl.h" />
     <ClInclude Include="..\include\libcurl\include\curl\curlver.h" />
     <ClInclude Include="..\include\libcurl\include\curl\easy.h" />
+    <ClInclude Include="..\include\libcurl\include\curl\header.h" />
     <ClInclude Include="..\include\libcurl\include\curl\mprintf.h" />
     <ClInclude Include="..\include\libcurl\include\curl\multi.h" />
     <ClInclude Include="..\include\libcurl\include\curl\options.h" />
@@ -127,6 +128,7 @@
     <ClInclude Include="..\include\libcurl\include\curl\system.h" />
     <ClInclude Include="..\include\libcurl\include\curl\typecheck-gcc.h" />
     <ClInclude Include="..\include\libcurl\include\curl\urlapi.h" />
+    <ClInclude Include="..\include\libcurl\include\curl\websockets.h" />
     <ClInclude Include="..\include\MinHook.h" />
     <ClInclude Include="..\include\openssl\aes.h" />
     <ClInclude Include="..\include\openssl\asn1.h" />

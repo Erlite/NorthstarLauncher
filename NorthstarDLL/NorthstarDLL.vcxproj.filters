@@ -1173,6 +1173,12 @@
     <ClInclude Include="core\macros.h">
       <Filter>Header Files\core</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\libcurl\include\curl\header.h">
+      <Filter>Header Files\include\libcurl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\libcurl\include\curl\websockets.h">
+      <Filter>Header Files\include\libcurl</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\include\spdlog\fmt\bundled\LICENSE.rst">
